@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Simulador de Estiba Pro - Memoria Magnética (4cm/6cm)</title>
+    <title>Simulador de Estiba Pro - Memoria Magnética (6cm/9cm)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -79,7 +79,7 @@
 
     <p style="font-size: 11px; color: #888; margin-top: 15px; line-height: 1.5; background: #222; padding: 10px; border-radius: 4px;">
         💡 <b>Reglas de Operación:</b><br>
-        1. <b>Hori/Vert:</b> Separación 4cm. <b>Transversal:</b> 6cm.<br>
+        1. <b>Hori/Vert:</b> Separación 6cm. <b>Transversal:</b> 9cm.<br>
         2. Al cambiar a una orientación <b>nueva</b>, inicias en Modo Libre para crear una nueva fila.<br>
         3. Al regresar a una orientación <b>existente</b>, retomas la distribución magnética donde te quedaste.
     </p>
@@ -109,8 +109,8 @@
     // Función dinámica para obtener la separación reglamentaria actualizada
     function getGapActual() {
         const orient = document.getElementById('orientacionPaca').value;
-        if (orient === "1") return 0.06; // Transversal (Verde): 6 cm
-        return 0.04; // Horizontal (Azul) y Vertical (Amarillo): 4 cm
+        if (orient === "1") return 0.09; // Transversal (Verde): 9 cm
+        return 0.06; // Horizontal (Azul) y Vertical (Amarillo): 6 cm
     }
 
     function init() {
@@ -309,7 +309,7 @@
         if (intersects.length > 0) {
             const dim = getDimPaca();
             // Mostrar texto dinámico según la orientación
-            const gapCM = getGapActual() === 0.06 ? "6" : "4";
+            const gapCM = getGapActual() === 0.09 ? "9" : "6";
             const isNivel2 = document.getElementById('segundoNivel').checked;
             const largoPlat = parseFloat(document.getElementById('plataformaLargo').value);
             let rawX = intersects[0].point.x;
@@ -405,6 +405,7 @@
             return;
         }
 
+        // Validación Final Anti-Clonación
         if(chequearColisiones(posX, posY, posZ, dim)) return;
 
         const geometry = new THREE.BoxGeometry(dim.x, dim.y, dim.z);
@@ -412,6 +413,7 @@
         const paca = new THREE.Mesh(geometry, material);
         paca.position.set(posX, posY, posZ);
         
+        // Guardamos la orientación en la memoria de la paca
         paca.userData.orientacion = orient;
 
         const edges = new THREE.EdgesGeometry(geometry);
@@ -421,14 +423,17 @@
         scene.add(paca);
         pacas.push(paca);
         
+        // Sumamos a la memoria por orientación
         pacasPorOrientacion[orient]++;
 
         document.getElementById('count').innerText = pacas.length;
         document.getElementById('alturaActual').innerText = alturaFinal.toFixed(2);
 
+        // Limpiar slot para evitar doble clic accidental
         currentMagneticSlot = null; 
         rollOverMesh.position.set(9999, 9999, 9999);
 
+        // Al colocar una paca con éxito, el sistema se bloquea en Modo Magnético automáticamente
         isModoLibre = false;
         onConfigChange(); 
     }
@@ -449,6 +454,7 @@
             const p = pacas.pop();
             scene.remove(p);
             
+            // Restamos de la memoria de orientación
             pacasPorOrientacion[p.userData.orientacion]--;
             
             document.getElementById('count').innerText = pacas.length;
@@ -477,7 +483,7 @@
         doc.setFontSize(18);
         doc.text("Plan de Carga - Reglas de Estiba Híbridas", 10, 15);
         doc.setFontSize(11);
-        doc.text(`Unidad: ${document.getElementById('plataformaLargo').value}m x 2.60m | Gaps: Hori/Vert(4cm) - Trans(6cm)`, 10, 25);
+        doc.text(`Unidad: ${document.getElementById('plataformaLargo').value}m x 2.60m | Gaps: Hori/Vert(6cm) - Trans(9cm)`, 10, 25);
         doc.text(`Volumen (Pacas): ${pacas.length}`, 10, 31);
         doc.text(`Altura Alcanzada: ${document.getElementById('alturaActual').innerText}m`, 10, 37);
         
