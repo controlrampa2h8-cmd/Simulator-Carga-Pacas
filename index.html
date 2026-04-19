@@ -2,12 +2,12 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Simulador de Estiba Pro - Reporte Avanzado</title>
+    <title>Informe: Carga de Pacas 3D</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Arial, sans-serif; display: flex; background: #121212; }
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; display: flex; background: #121212; }
         #ui-panel {
             width: 350px; height: 100vh; background: #1a1a1a; color: #f0f0f0;
             padding: 20px; box-sizing: border-box; z-index: 10; border-right: 1px solid #333;
@@ -15,61 +15,61 @@
         }
         canvas { display: block; cursor: crosshair; }
         .control-group { margin-bottom: 20px; }
-        label { display: block; margin-bottom: 8px; font-size: 13px; color: #aaa; font-weight: 600; }
+        label { display: block; margin-bottom: 8px; font-size: 14px; color: #aaa; font-weight: 600; }
         select, button { width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #444; font-size: 14px; }
         select { background: #2d2d2d; color: white; outline: none; }
         button { background: #0078d7; color: white; border: none; cursor: pointer; transition: 0.2s; font-weight: bold; margin-top: 5px; }
         button:hover { background: #005a9e; }
         button.delete { background: #c0392b; margin-top: 15px; }
-        button.delete:hover { background: #922b21; }
         button.export { background: #27ae60; margin-top: 10px; }
-        button.export:hover { background: #1e8449; }
         .stats { background: #252525; padding: 15px; border-radius: 6px; border: 1px solid #444; margin-top: 20px; }
         .stats div { margin-bottom: 8px; font-size: 14px; }
         .guide-panel { background: rgba(52, 152, 219, 0.1); border-left: 4px solid #3498db; padding: 10px; margin-top: 15px; border-radius: 4px; font-size: 13px; color: #3498db; font-weight: bold; line-height: 1.4;}
         .guide-panel.magnetic { background: rgba(46, 204, 113, 0.1); border-color: #2ecc71; color: #2ecc71; }
         .warning { color: #e74c3c; font-weight: bold; font-size: 13px; margin-top: 10px; display: none; padding: 10px; background: rgba(231,76,60,0.1); border-radius: 4px; border-left: 4px solid #e74c3c; line-height: 1.4; }
         .warning.leftover { background: rgba(230, 126, 34, 0.1); border-color: #e67e22; color: #e67e22; }
-        .checkbox-container { display: flex; align-items: center; gap: 10px; color: #f39c12; font-weight: bold; margin-top: 10px; cursor: pointer; background: rgba(243, 156, 18, 0.1); padding: 10px; border-radius: 4px;}
-        .checkbox-container input { width: 18px; height: 18px; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <div id="ui-panel">
-    <h2 style="color: #3498db; margin-top: 0; font-size: 22px;">Logística 3D</h2>
+    <h2 style="color: #3498db; margin-top: 0; font-size: 22px;">Simulador de Carga</h2>
     
     <div class="control-group">
-        <label>Dimensión de Plataforma:</label>
+        <label>Tamaño del Camión:</label>
         <select id="plataformaLargo">
-            <option value="12.5">12.50 m</option>
-            <option value="13.0">13.00 m</option>
-            <option value="13.2">13.20 m</option>
-            <option value="13.5">13.50 m</option>
+            <option value="12.5">12.50 metros</option>
+            <option value="13.0">13.00 metros</option>
+            <option value="13.2">13.20 metros</option>
+            <option value="13.5">13.50 metros</option>
         </select>
     </div>
 
     <div class="control-group">
-        <label>Orientación de la Siguiente Paca:</label>
+        <label>Tipo de Caja (Orientación):</label>
         <select id="orientacionPaca">
-            <option value="0">Horizontal: 1.40 x 1.10 (Azul)</option>
-            <option value="1">Transversal: 1.10 x 1.40 (Verde)</option>
-            <option value="2">Vertical: 1.10 x 1.10 x H1.40 (Amarillo)</option>
+            <option value="0">Acostada (Azul)</option>
+            <option value="1">A lo largo (Verde)</option>
+            <option value="2">Parada (Amarillo)</option>
         </select>
-        
-        <label class="checkbox-container">
-            <input type="checkbox" id="segundoNivel"> ACTIVAR 2° NIVEL
-        </label>
+    </div>
+
+    <div class="control-group">
+        <label>Nivel de Altura:</label>
+        <select id="nivelElegido">
+            <option value="1">Piso 1 (Base)</option>
+            <option value="2">Piso 2 (Medio)</option>
+            <option value="3">Piso 3 (Superior)</option>
+        </select>
     </div>
 
     <div class="stats">
-        <div style="color: #3498db; font-weight: bold; border-bottom: 1px solid #444; padding-bottom: 5px;">Total Pacas: <span id="count">0</span></div>
-        <div style="margin-top:10px;">Altura total: <span id="alturaActual">1.40</span> m</div>
-        <div style="font-size: 11px; color: #888;">(Suelo a plataforma: 1.40m)</div>
+        <div style="color: #3498db; font-weight: bold; border-bottom: 1px solid #444; padding-bottom: 5px;">Cajas totales: <span id="count">0</span></div>
+        <div style="margin-top:10px;">Altura total desde el suelo: <span id="alturaActual">1.40</span> m</div>
         
         <div class="guide-panel" id="estadoGuia">
             🔓 MODO LIBRE<br>
-            <span style="font-size: 11px; font-weight: normal; color: #f0f0f0;">Coloca la paca en cualquier lugar válido.</span>
+            <span style="font-size: 11px; font-weight: normal; color: #f0f0f0;">Coloca la caja donde desees.</span>
         </div>
 
         <div id="overhangMsg" class="warning">
@@ -78,15 +78,8 @@
         </div>
     </div>
 
-    <p style="font-size: 11px; color: #888; margin-top: 15px; line-height: 1.5; background: #222; padding: 10px; border-radius: 4px;">
-        💡 <b>Reglas de Operación:</b><br>
-        1. <b>Gap Longitudinal:</b> Hori/Vert(6.5cm) | Transversal(10.5cm).<br>
-        2. <b>Gap Lateral:</b> 0 cm (pegadas a los lados).<br>
-        3. <b>Sobrantes (Naranja):</b> Pacas en el límite de la plataforma.
-    </p>
-
-    <button class="delete" onclick="removeLast()">Deshacer Último</button>
-    <button class="export" onclick="exportPDF()">Generar Reporte PDF</button>
+    <button class="delete" onclick="removeLast()">Quitar Última Caja</button>
+    <button class="export" onclick="exportPDF()">Descargar Informe: Carga de Pacas</button>
 </div>
 
 <script>
@@ -103,13 +96,12 @@
 
     const ANCHO_PLATAFORMA = 2.60;
     const ALTURA_SUELO = 1.40; 
-    const ALTURA_MAXIMA = 4.20;
     const GRID_SNAP = 0.01;
 
     function getGapActual() {
         const orient = document.getElementById('orientacionPaca').value;
-        if (orient === "1") return 0.105; // Transversal: 10.5 cm
-        return 0.065; // Horizontal y Vertical: 6.5 cm
+        if (orient === "1") return 0.12; 
+        return 0.065; 
     }
 
     function init() {
@@ -117,14 +109,14 @@
         scene.background = new THREE.Color(0x1a1a1a);
 
         camera = new THREE.PerspectiveCamera(45, (window.innerWidth - 350) / window.innerHeight, 0.1, 1000);
-        camera.position.set(18, 12, 18);
+        camera.position.set(15, 10, 15);
 
         renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
         renderer.setSize(window.innerWidth - 350, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
         controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.maxPolarAngle = Math.PI / 2 - 0.02; 
+        controls.maxPolarAngle = Math.PI / 2 - 0.05; 
 
         raycaster = new THREE.Raycaster();
         mouse = new THREE.Vector2();
@@ -153,7 +145,7 @@
         
         document.getElementById('orientacionPaca').addEventListener('change', onConfigChange);
         document.getElementById('plataformaLargo').addEventListener('change', updatePlataforma);
-        document.getElementById('segundoNivel').addEventListener('change', onConfigChange);
+        document.getElementById('nivelElegido').addEventListener('change', onConfigChange);
 
         onConfigChange();
         animate();
@@ -192,25 +184,18 @@
 
     function onConfigChange() {
         const orient = document.getElementById('orientacionPaca').value;
-        
-        if (pacasPorOrientacion[orient] > 0) {
-            isModoLibre = false; 
-        } else {
-            isModoLibre = true;  
-        }
-
+        if (pacasPorOrientacion[orient] > 0) { isModoLibre = false; } else { isModoLibre = true; }
         const dim = getDimPaca();
         rollOverMesh.geometry.dispose();
         rollOverMesh.geometry = new THREE.BoxGeometry(dim.x, dim.y, dim.z);
         rollOverMesh.material.color.setHex(dim.color);
-        
         calcularGuiasMagneticas();
     }
 
     function chequearColisiones(x, y, z, dim) {
         const gapZ = getGapActual();
-        const halfGapZ = gapZ / 2 - 0.005; // Gap solo aplica en el eje Z
-        const epsilonX = 0.005; // Cero gap lateral
+        const halfGapZ = gapZ / 2 - 0.005;
+        const epsilonX = 0.005;
         const epsilonY = 0.05; 
 
         const cajaFantasma = new THREE.Box3(
@@ -222,12 +207,10 @@
             const p = pacas[i];
             const pDim = { x: p.geometry.parameters.width, y: p.geometry.parameters.height, z: p.geometry.parameters.depth };
             const pPos = p.position;
-            
             const cajaPaca = new THREE.Box3(
                 new THREE.Vector3(pPos.x - pDim.x/2 + epsilonX, pPos.y - pDim.y/2 + epsilonY, pPos.z - pDim.z/2 - halfGapZ),
                 new THREE.Vector3(pPos.x + pDim.x/2 - epsilonX, pPos.y + pDim.y/2 - epsilonY, pPos.z + pDim.z/2 + halfGapZ)
             );
-
             if (cajaFantasma.intersectsBox(cajaPaca)) return true; 
         }
         return false; 
@@ -237,64 +220,38 @@
         guideMeshes.forEach(m => scene.remove(m));
         guideMeshes = [];
         validSlots = [];
-
         if (isModoLibre) return;
-
         const dim = getDimPaca();
         const gapActual = getGapActual();
-        const isNivel2 = document.getElementById('segundoNivel').checked;
+        const nivel = parseInt(document.getElementById('nivelElegido').value);
         const largoPlat = parseFloat(document.getElementById('plataformaLargo').value);
-        
         let baseY = ALTURA_SUELO;
-        if (isNivel2) baseY += 1.10;
+        if (nivel === 2) baseY += 1.10;
+        if (nivel === 3) baseY += 2.20;
         let posY = baseY + dim.y / 2;
-
         let candidates = [];
-
         pacas.forEach(p => {
-            const pX = p.position.x;
-            const pZ = p.position.z;
-            const pY = p.position.y;
+            const pX = p.position.x; const pZ = p.position.z; const pY = p.position.y;
             const pDim = { x: p.geometry.parameters.width, y: p.geometry.parameters.height, z: p.geometry.parameters.depth };
-
-            if (isNivel2) {
-                if(Math.abs(pY - (ALTURA_SUELO + pDim.y/2)) < 0.1) {
-                     candidates.push({x: pX, y: posY, z: pZ});
-                }
-            } else {
-                if (Math.abs(pY - posY) < 0.1) {
-                    if (!p.userData.isLeftover) {
-                        candidates.push({x: pX, y: posY, z: pZ + pDim.z/2 + gapActual + dim.z/2}); 
-                    }
-                    candidates.push({x: pX, y: posY, z: pZ - pDim.z/2 - gapActual - dim.z/2}); 
-                    
-                    // Distribución Lateral (Ras con Ras)
-                    candidates.push({x: pX - pDim.x/2 - dim.x/2, y: posY, z: pZ}); 
-                    candidates.push({x: pX + pDim.x/2 + dim.x/2, y: posY, z: pZ}); 
-                }
+            if (Math.abs(pY - posY) < 0.1) {
+                if (!p.userData.isLeftover) candidates.push({x: pX, y: posY, z: pZ + pDim.z/2 + gapActual + dim.z/2}); 
+                candidates.push({x: pX, y: posY, z: pZ - pDim.z/2 - gapActual - dim.z/2}); 
+                candidates.push({x: pX - pDim.x/2 - dim.x/2, y: posY, z: pZ}); 
+                candidates.push({x: pX + pDim.x/2 + dim.x/2, y: posY, z: pZ}); 
             }
         });
-
         candidates.forEach(c => {
             if (Math.abs(c.x) + dim.x/2 > ANCHO_PLATAFORMA/2 + 0.001) return; 
             if (c.z - dim.z/2 >= largoPlat/2) return; 
             if (c.z - dim.z/2 < -largoPlat/2 - 0.001) return; 
             if (chequearColisiones(c.x, c.y, c.z, dim)) return; 
-
-            if (!validSlots.some(v => Math.abs(v.x - c.x) < 0.01 && Math.abs(v.z - c.z) < 0.01)) {
-                validSlots.push(c);
-            }
+            if (!validSlots.some(v => Math.abs(v.x - c.x) < 0.01 && Math.abs(v.z - c.z) < 0.01)) validSlots.push(c);
         });
-
-        const geo = new THREE.BoxGeometry(dim.x, dim.y, dim.z);
-        const edges = new THREE.EdgesGeometry(geo);
-        const mat = new THREE.LineBasicMaterial({ color: 0x2ecc71, linewidth: 2 });
-        
+        const edges = new THREE.EdgesGeometry(new THREE.BoxGeometry(dim.x, dim.y, dim.z));
         validSlots.forEach(s => {
-            const line = new THREE.LineSegments(edges, mat);
+            const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x2ecc71, linewidth: 2 }));
             line.position.set(s.x, s.y, s.z);
-            scene.add(line);
-            guideMeshes.push(line);
+            scene.add(line); guideMeshes.push(line);
         });
     }
 
@@ -302,56 +259,43 @@
         const rect = renderer.domElement.getBoundingClientRect();
         mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
         mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-
         raycaster.setFromCamera(mouse, camera);
         const intersects = raycaster.intersectObject(plane);
-
         const pnlOverhang = document.getElementById('overhangMsg');
         const detOverhang = document.getElementById('overhangDetails');
         const panelGuia = document.getElementById('estadoGuia');
 
         if (intersects.length > 0) {
             const dim = getDimPaca();
-            const gapCM = getGapActual() === 0.105 ? "10.5" : "6.5";
-            const isNivel2 = document.getElementById('segundoNivel').checked;
+            const nivel = parseInt(document.getElementById('nivelElegido').value);
             const largoPlat = parseFloat(document.getElementById('plataformaLargo').value);
             let rawX = intersects[0].point.x;
             let rawZ = intersects[0].point.z;
 
             if (isModoLibre) {
                 panelGuia.className = "guide-panel";
-                panelGuia.innerHTML = "🔓 MODO LIBRE<br><span style='font-size: 11px; font-weight: normal; color: #f0f0f0;'>Coloca la paca en cualquier lugar válido.</span>";
-                
+                panelGuia.innerHTML = "🔓 MODO LIBRE<br><span style='font-size: 11px; font-weight: normal;'>Coloca la caja en cualquier lugar válido.</span>";
                 let posX = Math.round(rawX / GRID_SNAP) * GRID_SNAP;
                 let posZ = Math.round(rawZ / GRID_SNAP) * GRID_SNAP;
-                
                 const limiteFrontal = -largoPlat/2 + (dim.z / 2);
                 if (posZ < limiteFrontal) posZ = limiteFrontal;
-
                 let baseY = ALTURA_SUELO;
-                if (isNivel2) baseY += 1.10;
+                if (nivel === 2) baseY += 1.10;
+                if (nivel === 3) baseY += 2.20;
                 let posY = baseY + (dim.y / 2);
-
                 rollOverMesh.position.set(posX, posY, posZ);
-
                 const excesoAncho = Math.max(0, (Math.abs(posX) + dim.x / 2) - (ANCHO_PLATAFORMA / 2));
                 const excesoTrasero = Math.max(0, (posZ + dim.z / 2) - (largoPlat / 2));
                 const hayColision = chequearColisiones(posX, posY, posZ, dim);
-
                 if (excesoAncho > 0 || hayColision) {
                     rollOverMesh.material.color.setHex(0xe74c3c);
-                    pnlOverhang.className = "warning";
                     pnlOverhang.style.display = 'block';
-                    let msg = [];
-                    if (hayColision) msg.push(`❌ Colisión o Gap Longitudinal < ${gapCM}cm`);
-                    if (excesoAncho > 0) msg.push(`↔️ Sobresale a los lados: ${(excesoAncho * 100).toFixed(1)} cm`);
-                    detOverhang.innerHTML = msg.join('<br>');
                     currentMagneticSlot = null;
                 } else if (excesoTrasero > 0) {
                     rollOverMesh.material.color.setHex(0xe67e22);
                     pnlOverhang.className = "warning leftover";
                     pnlOverhang.style.display = 'block';
-                    detOverhang.innerHTML = `⚠️ LÍMITE ALCANZADO<br>La paca entra en el espacio sobrante.<br>Sobresale atrás: ${(excesoTrasero * 100).toFixed(1)} cm`;
+                    detOverhang.innerHTML = `LÍMITE ALCANZADO<br>Espacio sobrante aprovechado.`;
                     currentMagneticSlot = {x: posX, y: posY, z: posZ, isLeftover: true}; 
                 } else {
                     rollOverMesh.material.color.setHex(dim.color);
@@ -360,119 +304,71 @@
                 }
             } else {
                 panelGuia.className = "guide-panel magnetic";
-                panelGuia.innerHTML = `🧲 MODO MAGNÉTICO ACTIVO<br><span style='font-size: 11px; font-weight: normal; color: #f0f0f0;'>Gap Longitudinal exacto a ${gapCM} cm.</span>`;
-
+                panelGuia.innerHTML = `🧲 MODO MAGNÉTICO<br><span style='font-size: 11px; font-weight: normal;'>Alineando a los espacios permitidos.</span>`;
                 if (validSlots.length > 0) {
-                    let closestSlot = null;
-                    let minDist = Infinity;
+                    let closestSlot = null; let minDist = Infinity;
                     validSlots.forEach(s => {
                         let d = Math.sqrt(Math.pow(s.x - rawX, 2) + Math.pow(s.z - rawZ, 2));
-                        if (d < minDist) {
-                            minDist = d;
-                            closestSlot = s;
-                        }
+                        if (d < minDist) { minDist = d; closestSlot = s; }
                     });
-
                     if (closestSlot && minDist < 1.5) {
                         rollOverMesh.position.set(closestSlot.x, closestSlot.y, closestSlot.z);
-                        
                         const excesoTrasero = Math.max(0, (closestSlot.z + dim.z / 2) - (largoPlat / 2));
-                        
                         if (excesoTrasero > 0) {
-                            rollOverMesh.material.color.setHex(0xe67e22); 
-                            pnlOverhang.className = "warning leftover";
-                            pnlOverhang.style.display = 'block';
-                            detOverhang.innerHTML = `⚠️ LÍMITE ALCANZADO<br>Paca sobrante. Sobresale: ${(excesoTrasero * 100).toFixed(1)} cm`;
+                            rollOverMesh.material.color.setHex(0xe67e22);
+                            pnlOverhang.className = "warning leftover"; pnlOverhang.style.display = 'block';
+                            detOverhang.innerHTML = `LÍMITE ALCANZADO`;
                             currentMagneticSlot = {x: closestSlot.x, y: closestSlot.y, z: closestSlot.z, isLeftover: true};
                         } else {
-                            rollOverMesh.material.color.setHex(dim.color); 
-                            pnlOverhang.style.display = 'none';
+                            rollOverMesh.material.color.setHex(dim.color); pnlOverhang.style.display = 'none';
                             currentMagneticSlot = {x: closestSlot.x, y: closestSlot.y, z: closestSlot.z, isLeftover: false};
                         }
                     } else {
                         rollOverMesh.position.set(rawX, rollOverMesh.position.y, rawZ);
-                        rollOverMesh.material.color.setHex(0xe74c3c); 
-                        pnlOverhang.className = "warning";
-                        pnlOverhang.style.display = 'block';
-                        detOverhang.innerHTML = "Acércate a las líneas verdes.";
-                        currentMagneticSlot = null;
+                        rollOverMesh.material.color.setHex(0xe74c3c); pnlOverhang.style.display = 'block';
+                        detOverhang.innerHTML = "Acércate a las líneas verdes."; currentMagneticSlot = null;
                     }
-                } else {
-                    rollOverMesh.material.color.setHex(0xe74c3c); 
-                    pnlOverhang.className = "warning";
-                    pnlOverhang.style.display = 'block';
-                    detOverhang.innerHTML = "No hay espacio válido para esta orientación.";
-                    currentMagneticSlot = null;
                 }
             }
         }
     }
 
-    function onClickPlacer(event) {
+    function onClickPlacer() {
         if (!currentMagneticSlot) return; 
-
-        const dim = getDimPaca();
-        const orient = document.getElementById('orientacionPaca').value;
-        const posX = currentMagneticSlot.x;
-        const posY = currentMagneticSlot.y;
-        const posZ = currentMagneticSlot.z;
-
-        const alturaFinal = posY + (dim.y / 2);
-
-        if(alturaFinal > ALTURA_MAXIMA) {
-            alert(`RECHAZO DE ESTIBA:\nSupera el límite legal de ${ALTURA_MAXIMA}m.`);
-            return;
-        }
-
+        const dim = getDimPaca(); const orient = document.getElementById('orientacionPaca').value;
+        const posX = currentMagneticSlot.x; const posY = currentMagneticSlot.y; const posZ = currentMagneticSlot.z;
         if(chequearColisiones(posX, posY, posZ, dim)) return;
-
         const colorFinal = currentMagneticSlot.isLeftover ? 0xe67e22 : dim.color;
-
         const geometry = new THREE.BoxGeometry(dim.x, dim.y, dim.z);
-        const material = new THREE.MeshPhongMaterial({ color: colorFinal });
-        const paca = new THREE.Mesh(geometry, material);
+        const paca = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial({ color: colorFinal }));
         paca.position.set(posX, posY, posZ);
-        
-        paca.userData.orientacion = orient;
-        paca.userData.isLeftover = currentMagneticSlot.isLeftover;
-
-        const edges = new THREE.EdgesGeometry(geometry);
-        const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 }));
-        paca.add(line);
-
-        scene.add(paca);
-        pacas.push(paca);
-        
+        paca.userData = { orientacion: orient, isLeftover: currentMagneticSlot.isLeftover };
+        paca.add(new THREE.LineSegments(new THREE.EdgesGeometry(geometry), new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 })));
+        scene.add(paca); pacas.push(paca);
         pacasPorOrientacion[orient]++;
-
         document.getElementById('count').innerText = pacas.length;
-        document.getElementById('alturaActual').innerText = alturaFinal.toFixed(2);
-
-        currentMagneticSlot = null; 
-        rollOverMesh.position.set(9999, 9999, 9999);
-
-        isModoLibre = false;
-        onConfigChange(); 
+        
+        let altMax = 0;
+        pacas.forEach(p => { altMax = Math.max(altMax, p.position.y + p.geometry.parameters.height/2); });
+        document.getElementById('alturaActual').innerText = altMax.toFixed(2);
+        
+        currentMagneticSlot = null; rollOverMesh.position.set(9999, 9999, 9999);
+        isModoLibre = false; onConfigChange(); 
     }
 
     function updatePlataforma() {
         crearRemolque(parseFloat(document.getElementById('plataformaLargo').value));
-        pacas.forEach(p => scene.remove(p));
-        pacas = [];
+        pacas.forEach(p => scene.remove(p)); pacas = [];
         pacasPorOrientacion = { '0': 0, '1': 0, '2': 0 };
         document.getElementById('count').innerText = "0";
         document.getElementById('alturaActual').innerText = "1.40";
-        isModoLibre = true; 
-        onConfigChange();
+        isModoLibre = true; onConfigChange();
     }
 
     function removeLast() {
         if(pacas.length > 0) {
-            const p = pacas.pop();
-            scene.remove(p);
-            
+            const p = pacas.pop(); scene.remove(p);
             pacasPorOrientacion[p.userData.orientacion]--;
-            
             document.getElementById('count').innerText = pacas.length;
             onConfigChange();
         }
@@ -484,112 +380,51 @@
         renderer.setSize(window.innerWidth - 350, window.innerHeight);
     }
 
-    // --- GENERACIÓN DE REPORTE PDF MULTI-CÁMARA ---
     async function exportPDF() {
         const { jsPDF } = window.jspdf;
-        // Documento en Portrait (A4 vertical)
         const doc = new jsPDF('p', 'mm', 'a4'); 
         const canvas = renderer.domElement;
+        rollOverMesh.visible = false; guideMeshes.forEach(m => m.visible = false);
 
-        // Ocultar elementos fantasma para las fotos
-        rollOverMesh.visible = false;
-        guideMeshes.forEach(m => m.visible = false);
-
-        // Guardar estado actual de la cámara
         const origPos = camera.position.clone();
         const origTarget = controls.target.clone();
-        const largoPlat = parseFloat(document.getElementById('plataformaLargo').value);
-
-        // Función para mover cámara, renderizar y tomar foto
-        const captureView = (posX, posY, posZ, tgtX=0, tgtY=2, tgtZ=0) => {
+        const captureView = (posX, posY, posZ) => {
             camera.position.set(posX, posY, posZ);
-            controls.target.set(tgtX, tgtY, tgtZ);
-            controls.update();
+            controls.target.set(0, 2, 0); controls.update();
             renderer.render(scene, camera);
             return canvas.toDataURL('image/png');
         };
 
-        // FOTO 1: Vista Isométrica
-        const img1 = captureView(18, 12, 18);
-        // FOTO 2: Vista Trasera (Analizar Lateral/Alturas)
-        const img2 = captureView(0, 5, largoPlat/2 + 10, 0, 2, 0);
-        // FOTO 3: Vista Lateral (Analizar Gaps Longitudinales)
-        const img3 = captureView(largoPlat/2 + 10, 5, 0, 0, 2, 0);
+        // ZOOM ALTO (Cerca de la carga)
+        const img1 = captureView(8, 6, 8);
+        const img2 = captureView(0, 3, 10);
+        const img3 = captureView(10, 3, 0);
 
-        // Restaurar la cámara a como la tenía el usuario
-        camera.position.copy(origPos);
-        controls.target.copy(origTarget);
-        controls.update();
+        camera.position.copy(origPos); controls.target.copy(origTarget); controls.update();
         renderer.render(scene, camera);
+        rollOverMesh.visible = true; guideMeshes.forEach(m => m.visible = true);
+
+        doc.setFontSize(22); doc.text("Informe: Carga de Pacas", 10, 20);
+        doc.setFontSize(12);
+        doc.text(`Cantidad de cajas en plataforma: ${pacas.length}`, 10, 32);
+        doc.text(`Altura total desde el suelo: ${document.getElementById('alturaActual').innerText} metros`, 10, 40);
         
-        // Mostrar nuevamente las guías
-        rollOverMesh.visible = true;
-        guideMeshes.forEach(m => m.visible = true);
-
-        // --- CONSTRUCCIÓN DEL DOCUMENTO PDF ---
-        doc.setFontSize(18);
-        doc.text("Reporte de Auditoría de Estiba 3D", 10, 20);
-
-        doc.setFontSize(11);
-        doc.text(`Unidad Analizada: Plataforma plana de ${largoPlat}m x 2.60m`, 10, 30);
-        doc.text(`Volumen Total: ${pacas.length} unidades cargadas`, 10, 36);
-
-        // Bloque: Distribución
-        doc.setFont(undefined, 'bold');
-        doc.text("Detalle de Distribución (Tipo de Orientación):", 10, 46);
-        doc.setFont(undefined, 'normal');
-        doc.text(`• Horizontal (Azul - Gap 6.5cm): ${pacasPorOrientacion['0']} pacas`, 15, 52);
-        doc.text(`• Transversal (Verde - Gap 10.5cm): ${pacasPorOrientacion['1']} pacas`, 15, 58);
-        doc.text(`• Vertical (Amarillo - Gap 6.5cm): ${pacasPorOrientacion['2']} pacas`, 15, 64);
-
-        // Bloque: Alturas
-        const alturaTotal = parseFloat(document.getElementById('alturaActual').innerText);
-        const alturaCarga = alturaTotal - 1.40;
-
-        doc.setFont(undefined, 'bold');
-        doc.text("Análisis de Altura Máxima:", 10, 76);
-        doc.setFont(undefined, 'normal');
-        doc.text(`1. Altura desde el suelo a la plataforma base: 1.40 m`, 15, 82);
-        doc.text(`2. Altura máxima de la carga (Todos los niveles): ${alturaCarga.toFixed(2)} m`, 15, 88);
-        
-        doc.setFont(undefined, 'bold');
-        doc.text(`=> ALTURA MÁXIMA TOTAL (Suelo + Plataforma + Carga): ${alturaTotal.toFixed(2)} m`, 15, 96);
-        doc.setFont(undefined, 'normal');
-        doc.text(`(El límite legal nacional permitido es de 4.20 m)`, 15, 102);
-
-        // Helper para insertar imágenes sin deformarlas
-        const addPropImage = (imgData, yPos) => {
-            const props = doc.getImageProperties(imgData);
-            const pdfWidth = 190;
-            const pdfHeight = (props.height * pdfWidth) / props.width;
-            doc.addImage(imgData, 'PNG', 10, yPos, pdfWidth, pdfHeight);
-            return pdfHeight;
+        const addImg = (data, y) => {
+            doc.addImage(data, 'PNG', 10, y, 190, 110);
         };
 
-        // Insertar FOTO 1
-        doc.setFont(undefined, 'bold');
-        doc.text("Vista General (Isométrica):", 10, 114);
-        addPropImage(img1, 118);
-
-        // Página 2 para las vistas técnicas
+        doc.text("Imagen 1: Vista general de la carga", 10, 52);
+        addImg(img1, 56);
         doc.addPage();
-        
-        doc.text("Vista Trasera (Alineación y Altura Ras con Ras):", 10, 20);
-        let h2 = addPropImage(img2, 24);
+        doc.text("Imagen 2: Vista desde atrás", 10, 20);
+        addImg(img2, 24);
+        doc.text("Imagen 3: Vista desde el costado", 10, 145);
+        addImg(img3, 149);
 
-        doc.text("Vista Lateral (Comprobación de Gaps Longitudinales):", 10, 24 + h2 + 10);
-        addPropImage(img3, 24 + h2 + 14);
-
-        // Generar descarga
-        doc.save(`Reporte_Estiba_${largoPlat}m.pdf`);
+        doc.save(`Informe_Carga_Pacas.pdf`);
     }
 
-    function animate() {
-        requestAnimationFrame(animate);
-        controls.update();
-        renderer.render(scene, camera);
-    }
-
+    function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
     window.onload = init;
 </script>
 </body>
