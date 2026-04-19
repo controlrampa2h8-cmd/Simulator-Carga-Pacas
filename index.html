@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Simulador de Estiba Pro - Gap Transversal 12cm</title>
+    <title>Simulador de Estiba Pro - Reporte Avanzado</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -64,8 +64,8 @@
 
     <div class="stats">
         <div style="color: #3498db; font-weight: bold; border-bottom: 1px solid #444; padding-bottom: 5px;">Total Pacas: <span id="count">0</span></div>
-        <div style="margin-top:10px;">Altura desde suelo: <span id="alturaActual">1.40</span> m</div>
-        <div style="font-size: 11px; color: #888;">(Límite Legal MTC: 4.20 m)</div>
+        <div style="margin-top:10px;">Altura total: <span id="alturaActual">1.40</span> m</div>
+        <div style="font-size: 11px; color: #888;">(Suelo a plataforma: 1.40m)</div>
         
         <div class="guide-panel" id="estadoGuia">
             🔓 MODO LIBRE<br>
@@ -80,13 +80,13 @@
 
     <p style="font-size: 11px; color: #888; margin-top: 15px; line-height: 1.5; background: #222; padding: 10px; border-radius: 4px;">
         💡 <b>Reglas de Operación:</b><br>
-        1. <b>Gap Longitudinal:</b> Hori/Vert(6.5cm) | Transversal(12cm).<br>
-        2. <b>Gap Lateral:</b> 0 cm (se pueden colocar pegadas a los lados).<br>
-        3. <b>Sobrantes (Naranja):</b> Indica paca colocada en el límite trasero.
+        1. <b>Gap Longitudinal:</b> Hori/Vert(6.5cm) | Transversal(10.5cm).<br>
+        2. <b>Gap Lateral:</b> 0 cm (pegadas a los lados).<br>
+        3. <b>Sobrantes (Naranja):</b> Pacas en el límite de la plataforma.
     </p>
 
     <button class="delete" onclick="removeLast()">Deshacer Último</button>
-    <button class="export" onclick="exportPDF()">Descargar PDF</button>
+    <button class="export" onclick="exportPDF()">Generar Reporte PDF</button>
 </div>
 
 <script>
@@ -95,7 +95,6 @@
     let rollOverMesh, rollOverMaterial;
     let pacas = [];
     
-    // SISTEMA DE GUÍAS Y ESTADO (MEMORIA)
     let validSlots = [];
     let guideMeshes = [];
     let currentMagneticSlot = null;
@@ -107,11 +106,10 @@
     const ALTURA_MAXIMA = 4.20;
     const GRID_SNAP = 0.01;
 
-    // Solo se aplica en el eje Z (Adelante/Atrás)
     function getGapActual() {
         const orient = document.getElementById('orientacionPaca').value;
-        if (orient === "1") return 0.12; // CORREGIDO: Transversal (Verde) ahora es estrictamente 12 cm
-        return 0.065; // Horizontal (Azul) y Vertical (Amarillo): 6.5 cm
+        if (orient === "1") return 0.105; // Transversal: 10.5 cm
+        return 0.065; // Horizontal y Vertical: 6.5 cm
     }
 
     function init() {
@@ -211,11 +209,10 @@
 
     function chequearColisiones(x, y, z, dim) {
         const gapZ = getGapActual();
-        const halfGapZ = gapZ / 2 - 0.005; // Gap solo aplica en el eje Z (Longitudinal)
-        const epsilonX = 0.005; // Tolerancia lateral para permitir pacas ras con ras
+        const halfGapZ = gapZ / 2 - 0.005; // Gap solo aplica en el eje Z
+        const epsilonX = 0.005; // Cero gap lateral
         const epsilonY = 0.05; 
 
-        // Caja de colisión ajustada: Lados (X) están al ras, Frente/Atrás (Z) tienen el Gap exigido
         const cajaFantasma = new THREE.Box3(
             new THREE.Vector3(x - dim.x/2 + epsilonX, y - dim.y/2 + epsilonY, z - dim.z/2 - halfGapZ),
             new THREE.Vector3(x + dim.x/2 - epsilonX, y + dim.y/2 - epsilonY, z + dim.z/2 + halfGapZ)
@@ -266,13 +263,12 @@
                 }
             } else {
                 if (Math.abs(pY - posY) < 0.1) {
-                    // Distribución Longitudinal (Eje Z) - APLICA EL GAP
                     if (!p.userData.isLeftover) {
                         candidates.push({x: pX, y: posY, z: pZ + pDim.z/2 + gapActual + dim.z/2}); 
                     }
                     candidates.push({x: pX, y: posY, z: pZ - pDim.z/2 - gapActual - dim.z/2}); 
                     
-                    // Distribución Lateral (Eje X) - CERO GAP (Ras con Ras)
+                    // Distribución Lateral (Ras con Ras)
                     candidates.push({x: pX - pDim.x/2 - dim.x/2, y: posY, z: pZ}); 
                     candidates.push({x: pX + pDim.x/2 + dim.x/2, y: posY, z: pZ}); 
                 }
@@ -316,13 +312,12 @@
 
         if (intersects.length > 0) {
             const dim = getDimPaca();
-            const gapCM = getGapActual() === 0.12 ? "12" : "6.5";
+            const gapCM = getGapActual() === 0.105 ? "10.5" : "6.5";
             const isNivel2 = document.getElementById('segundoNivel').checked;
             const largoPlat = parseFloat(document.getElementById('plataformaLargo').value);
             let rawX = intersects[0].point.x;
             let rawZ = intersects[0].point.z;
 
-            // EVALUACIÓN MODO LIBRE
             if (isModoLibre) {
                 panelGuia.className = "guide-panel";
                 panelGuia.innerHTML = "🔓 MODO LIBRE<br><span style='font-size: 11px; font-weight: normal; color: #f0f0f0;'>Coloca la paca en cualquier lugar válido.</span>";
@@ -353,7 +348,6 @@
                     detOverhang.innerHTML = msg.join('<br>');
                     currentMagneticSlot = null;
                 } else if (excesoTrasero > 0) {
-                    // ESPACIO SOBRANTE AL FINAL
                     rollOverMesh.material.color.setHex(0xe67e22);
                     pnlOverhang.className = "warning leftover";
                     pnlOverhang.style.display = 'block';
@@ -364,9 +358,7 @@
                     pnlOverhang.style.display = 'none';
                     currentMagneticSlot = {x: posX, y: posY, z: posZ, isLeftover: false}; 
                 }
-            } 
-            // EVALUACIÓN MODO MAGNÉTICO
-            else {
+            } else {
                 panelGuia.className = "guide-panel magnetic";
                 panelGuia.innerHTML = `🧲 MODO MAGNÉTICO ACTIVO<br><span style='font-size: 11px; font-weight: normal; color: #f0f0f0;'>Gap Longitudinal exacto a ${gapCM} cm.</span>`;
 
@@ -492,27 +484,104 @@
         renderer.setSize(window.innerWidth - 350, window.innerHeight);
     }
 
-    function exportPDF() {
+    // --- GENERACIÓN DE REPORTE PDF MULTI-CÁMARA ---
+    async function exportPDF() {
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF('l', 'mm', 'a4');
+        // Documento en Portrait (A4 vertical)
+        const doc = new jsPDF('p', 'mm', 'a4'); 
         const canvas = renderer.domElement;
-        
+
+        // Ocultar elementos fantasma para las fotos
         rollOverMesh.visible = false;
         guideMeshes.forEach(m => m.visible = false);
+
+        // Guardar estado actual de la cámara
+        const origPos = camera.position.clone();
+        const origTarget = controls.target.clone();
+        const largoPlat = parseFloat(document.getElementById('plataformaLargo').value);
+
+        // Función para mover cámara, renderizar y tomar foto
+        const captureView = (posX, posY, posZ, tgtX=0, tgtY=2, tgtZ=0) => {
+            camera.position.set(posX, posY, posZ);
+            controls.target.set(tgtX, tgtY, tgtZ);
+            controls.update();
+            renderer.render(scene, camera);
+            return canvas.toDataURL('image/png');
+        };
+
+        // FOTO 1: Vista Isométrica
+        const img1 = captureView(18, 12, 18);
+        // FOTO 2: Vista Trasera (Analizar Lateral/Alturas)
+        const img2 = captureView(0, 5, largoPlat/2 + 10, 0, 2, 0);
+        // FOTO 3: Vista Lateral (Analizar Gaps Longitudinales)
+        const img3 = captureView(largoPlat/2 + 10, 5, 0, 0, 2, 0);
+
+        // Restaurar la cámara a como la tenía el usuario
+        camera.position.copy(origPos);
+        controls.target.copy(origTarget);
+        controls.update();
         renderer.render(scene, camera);
-        const imgData = canvas.toDataURL('image/png');
+        
+        // Mostrar nuevamente las guías
         rollOverMesh.visible = true;
         guideMeshes.forEach(m => m.visible = true);
 
+        // --- CONSTRUCCIÓN DEL DOCUMENTO PDF ---
         doc.setFontSize(18);
-        doc.text("Plan de Carga - Gaps Longitudinales (6.5cm/12cm)", 10, 15);
+        doc.text("Reporte de Auditoría de Estiba 3D", 10, 20);
+
         doc.setFontSize(11);
-        doc.text(`Unidad: ${document.getElementById('plataformaLargo').value}m x 2.60m | Gaps Z: Hori/Vert(6.5cm) - Trans(12cm) | Gap X: 0cm`, 10, 25);
-        doc.text(`Volumen (Pacas): ${pacas.length} (Las pacas Naranja indican aprovechamiento del espacio límite)`, 10, 31);
-        doc.text(`Altura Alcanzada: ${document.getElementById('alturaActual').innerText}m`, 10, 37);
+        doc.text(`Unidad Analizada: Plataforma plana de ${largoPlat}m x 2.60m`, 10, 30);
+        doc.text(`Volumen Total: ${pacas.length} unidades cargadas`, 10, 36);
+
+        // Bloque: Distribución
+        doc.setFont(undefined, 'bold');
+        doc.text("Detalle de Distribución (Tipo de Orientación):", 10, 46);
+        doc.setFont(undefined, 'normal');
+        doc.text(`• Horizontal (Azul - Gap 6.5cm): ${pacasPorOrientacion['0']} pacas`, 15, 52);
+        doc.text(`• Transversal (Verde - Gap 10.5cm): ${pacasPorOrientacion['1']} pacas`, 15, 58);
+        doc.text(`• Vertical (Amarillo - Gap 6.5cm): ${pacasPorOrientacion['2']} pacas`, 15, 64);
+
+        // Bloque: Alturas
+        const alturaTotal = parseFloat(document.getElementById('alturaActual').innerText);
+        const alturaCarga = alturaTotal - 1.40;
+
+        doc.setFont(undefined, 'bold');
+        doc.text("Análisis de Altura Máxima:", 10, 76);
+        doc.setFont(undefined, 'normal');
+        doc.text(`1. Altura desde el suelo a la plataforma base: 1.40 m`, 15, 82);
+        doc.text(`2. Altura máxima de la carga (Todos los niveles): ${alturaCarga.toFixed(2)} m`, 15, 88);
         
-        doc.addImage(imgData, 'PNG', 10, 45, 277, 145);
-        doc.save("Plan_Carga_Multireglas.pdf");
+        doc.setFont(undefined, 'bold');
+        doc.text(`=> ALTURA MÁXIMA TOTAL (Suelo + Plataforma + Carga): ${alturaTotal.toFixed(2)} m`, 15, 96);
+        doc.setFont(undefined, 'normal');
+        doc.text(`(El límite legal nacional permitido es de 4.20 m)`, 15, 102);
+
+        // Helper para insertar imágenes sin deformarlas
+        const addPropImage = (imgData, yPos) => {
+            const props = doc.getImageProperties(imgData);
+            const pdfWidth = 190;
+            const pdfHeight = (props.height * pdfWidth) / props.width;
+            doc.addImage(imgData, 'PNG', 10, yPos, pdfWidth, pdfHeight);
+            return pdfHeight;
+        };
+
+        // Insertar FOTO 1
+        doc.setFont(undefined, 'bold');
+        doc.text("Vista General (Isométrica):", 10, 114);
+        addPropImage(img1, 118);
+
+        // Página 2 para las vistas técnicas
+        doc.addPage();
+        
+        doc.text("Vista Trasera (Alineación y Altura Ras con Ras):", 10, 20);
+        let h2 = addPropImage(img2, 24);
+
+        doc.text("Vista Lateral (Comprobación de Gaps Longitudinales):", 10, 24 + h2 + 10);
+        addPropImage(img3, 24 + h2 + 14);
+
+        // Generar descarga
+        doc.save(`Reporte_Estiba_${largoPlat}m.pdf`);
     }
 
     function animate() {
