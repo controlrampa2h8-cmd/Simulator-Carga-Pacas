@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Simulador de Estiba Pro - Flujo Híbrido (3cm)</title>
+    <title>Simulador de Estiba Pro - Conteo Exacto (3cm)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -80,7 +80,7 @@
     <p style="font-size: 12px; color: #888; margin-top: 20px; line-height: 1.5; background: #222; padding: 10px; border-radius: 4px;">
         💡 <b>Instrucciones:</b><br>
         1. Al iniciar o cambiar orientación, estás en <b>Modo Libre</b>.<br>
-        2. Al colocar una paca, se activa el <b>Modo Magnético</b> (guías verdes a 3cm exactos).<br>
+        2. Al colocar una paca, se activa el <b>Modo Magnético</b> (guías a 3cm exactos).<br>
         3. Para salir del modo magnético, simplemente vuelve a elegir una orientación.
     </p>
 
@@ -98,7 +98,7 @@
     let validSlots = [];
     let guideMeshes = [];
     let currentMagneticSlot = null;
-    let isModoLibre = true; // Controla si estamos en modo libre o magnético
+    let isModoLibre = true; 
 
     const ANCHO_PLATAFORMA = 2.60;
     const ALTURA_SUELO = 1.40; 
@@ -147,7 +147,7 @@
         
         // Listeners
         document.getElementById('orientacionPaca').addEventListener('change', (e) => {
-            isModoLibre = true; // Liberar al cambiar de orientación
+            isModoLibre = true; 
             onConfigChange();
         });
         document.getElementById('plataformaLargo').addEventListener('change', () => {
@@ -200,7 +200,6 @@
     }
 
     function chequearColisiones(x, y, z, dim) {
-        // Tolerancia estricta para garantizar 3cm (0.03m) de gap en los ejes X y Z
         const halfGap = GAP_PACAS / 2 - 0.005; 
         const epsilonY = 0.05; 
 
@@ -229,7 +228,6 @@
         guideMeshes = [];
         validSlots = [];
 
-        // No calcular guías si la plataforma está vacía o si el usuario solicitó Modo Libre
         if (pacas.length === 0 || isModoLibre) return;
 
         const dim = getDimPaca();
@@ -302,7 +300,6 @@
             let rawX = intersects[0].point.x;
             let rawZ = intersects[0].point.z;
 
-            // EVALUACIÓN MODO LIBRE
             if (isModoLibre || pacas.length === 0) {
                 panelGuia.className = "guide-panel";
                 panelGuia.innerHTML = "🔓 MODO LIBRE<br><span style='font-size: 11px; font-weight: normal; color: #f0f0f0;'>Coloca la paca en cualquier lugar válido.</span>";
@@ -337,9 +334,7 @@
                     pnlOverhang.style.display = 'none';
                     currentMagneticSlot = {x: posX, y: posY, z: posZ}; 
                 }
-            } 
-            // EVALUACIÓN MODO MAGNÉTICO
-            else {
+            } else {
                 panelGuia.className = "guide-panel magnetic";
                 panelGuia.innerHTML = "🧲 MODO MAGNÉTICO ACTIVO<br><span style='font-size: 11px; font-weight: normal; color: #f0f0f0;'>Calculando espacios exactos a 3 cm.</span>";
 
@@ -391,6 +386,11 @@
             return;
         }
 
+        // DOUBLE-CHECK de seguridad para evitar pacas fantasma superpuestas
+        if(chequearColisiones(posX, posY, posZ, dim)) {
+            return;
+        }
+
         const geometry = new THREE.BoxGeometry(dim.x, dim.y, dim.z);
         const material = new THREE.MeshPhongMaterial({ color: dim.color });
         const paca = new THREE.Mesh(geometry, material);
@@ -406,8 +406,13 @@
         document.getElementById('count').innerText = pacas.length;
         document.getElementById('alturaActual').innerText = alturaFinal.toFixed(2);
 
-        // Al colocar una paca con éxito, el sistema se bloquea en Modo Magnético para las siguientes
+        // BORRAMOS EL SLOT AL INSTANTE PARA EVITAR CLIC DOBLE
+        currentMagneticSlot = null; 
         isModoLibre = false;
+        
+        // Esconder la malla fantasma hasta que se mueva el mouse
+        rollOverMesh.position.set(9999, 9999, 9999);
+
         onConfigChange(); 
     }
 
@@ -417,7 +422,7 @@
         pacas = [];
         document.getElementById('count').innerText = "0";
         document.getElementById('alturaActual').innerText = "1.40";
-        isModoLibre = true; // Al resetear plataforma, iniciamos en Modo Libre
+        isModoLibre = true; 
         onConfigChange();
     }
 
