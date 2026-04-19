@@ -9,15 +9,16 @@
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; display: flex; background: #121212; }
         #ui-panel {
-            width: 350px; height: 100vh; background: #1a1a1a; color: #f0f0f0;
+            width: 360px; height: 100vh; background: #1a1a1a; color: #f0f0f0;
             padding: 20px; box-sizing: border-box; z-index: 10; border-right: 1px solid #333;
             box-shadow: 4px 0 15px rgba(0,0,0,0.8); overflow-y: auto;
         }
         canvas { display: block; cursor: crosshair; }
-        .control-group { margin-bottom: 20px; }
-        label { display: block; margin-bottom: 8px; font-size: 14px; color: #aaa; font-weight: 600; }
+        .control-group { margin-bottom: 18px; }
+        label { display: block; margin-bottom: 6px; font-size: 13px; color: #aaa; font-weight: 600; }
         select, button { width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #444; font-size: 14px; }
         select { background: #2d2d2d; color: white; outline: none; }
+        select:disabled { opacity: 0.5; cursor: not-allowed; }
         button { background: #0078d7; color: white; border: none; cursor: pointer; transition: 0.2s; font-weight: bold; margin-top: 5px; }
         button:hover { background: #005a9e; }
         button.delete { background: #c0392b; margin-top: 15px; }
@@ -28,6 +29,7 @@
         .guide-panel.magnetic { background: rgba(46, 204, 113, 0.1); border-color: #2ecc71; color: #2ecc71; }
         .warning { color: #e74c3c; font-weight: bold; font-size: 13px; margin-top: 10px; display: none; padding: 10px; background: rgba(231,76,60,0.1); border-radius: 4px; border-left: 4px solid #e74c3c; line-height: 1.4; }
         .warning.leftover { background: rgba(230, 126, 34, 0.1); border-color: #e67e22; color: #e67e22; }
+        .warning.info { background: rgba(52, 152, 219, 0.1); border-color: #3498db; color: #3498db; display: block; }
     </style>
 </head>
 <body>
@@ -46,11 +48,19 @@
     </div>
 
     <div class="control-group">
+        <label>Modo de Carga:</label>
+        <select id="modoCarga" style="border-color: #3498db;">
+            <option value="estandar">Estándar (Pegadas a los lados)</option>
+            <option value="central">Separación Central (10cm del eje)</option>
+        </select>
+    </div>
+
+    <div class="control-group">
         <label>Tipo de Caja (Orientación):</label>
         <select id="orientacionPaca">
-            <option value="0">Acostada (Azul)</option>
-            <option value="1">A lo largo (Verde)</option>
-            <option value="2">Parada (Amarillo)</option>
+            <option value="0">Acostada (Azul - Horizontal)</option>
+            <option value="1">A lo largo (Verde - Transversal)</option>
+            <option value="2">Parada (Amarillo - Vertical)</option>
         </select>
     </div>
 
@@ -78,15 +88,8 @@
         </div>
     </div>
 
-    <p style="font-size: 11px; color: #888; margin-top: 15px; line-height: 1.5; background: #222; padding: 10px; border-radius: 4px;">
-        💡 <b>Reglas de Operación:</b><br>
-        1. <b>Gap Longitudinal:</b> Hori/Vert(6.5cm) | Transversal(12cm).<br>
-        2. <b>Gap Lateral:</b> 0 cm (pegadas a los lados).<br>
-        3. <b>Sobrantes (Naranja):</b> Pacas en el límite de la plataforma.
-    </p>
-
     <button class="delete" onclick="removeLast()">Quitar Última Caja</button>
-    <button class="export" onclick="exportPDF()">Descargar Informe: Carga de Pacas</button>
+    <button class="export" onclick="exportPDF()">Descargar Informe PDF</button>
 </div>
 
 <script>
@@ -100,7 +103,7 @@
     let currentMagneticSlot = null;
     let isModoLibre = true; 
     
-    // Novedad: Memoria independiente por cada piso y orientación
+    // Memoria independiente por cada piso y modo
     let pacasTracker = {
         '1': { '0': 0, '1': 0, '2': 0 },
         '2': { '0': 0, '1': 0, '2': 0 },
@@ -113,19 +116,19 @@
 
     function getGapActual() {
         const orient = document.getElementById('orientacionPaca').value;
-        if (orient === "1") return 0.12; // Transversal estrictamente a 12cm
-        return 0.065; // Horizontal y Vertical a 6.5cm
+        if (orient === "1") return 0.12; // Transversal: 12cm
+        return 0.065; // Horizontal y Vertical: 6.5cm
     }
 
     function init() {
         scene = new THREE.Scene();
         scene.background = new THREE.Color(0x1a1a1a);
 
-        camera = new THREE.PerspectiveCamera(45, (window.innerWidth - 350) / window.innerHeight, 0.1, 1000);
+        camera = new THREE.PerspectiveCamera(45, (window.innerWidth - 360) / window.innerHeight, 0.1, 1000);
         camera.position.set(15, 10, 15);
 
         renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-        renderer.setSize(window.innerWidth - 350, window.innerHeight);
+        renderer.setSize(window.innerWidth - 360, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
         controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -156,6 +159,19 @@
         renderer.domElement.addEventListener('click', onClickPlacer);
         window.addEventListener('resize', onWindowResize);
         
+        // Listeners
+        document.getElementById('modoCarga').addEventListener('change', () => {
+            const modo = document.getElementById('modoCarga').value;
+            const orientSelect = document.getElementById('orientacionPaca');
+            if (modo === 'central') {
+                orientSelect.value = "0"; // Fuerza distribución horizontal
+                orientSelect.disabled = true;
+            } else {
+                orientSelect.disabled = false;
+            }
+            updatePlataforma(); // Limpia al cambiar de modo estructural
+        });
+
         document.getElementById('orientacionPaca').addEventListener('change', onConfigChange);
         document.getElementById('plataformaLargo').addEventListener('change', updatePlataforma);
         document.getElementById('nivelElegido').addEventListener('change', onConfigChange);
@@ -199,7 +215,6 @@
         const orient = document.getElementById('orientacionPaca').value;
         const nivel = document.getElementById('nivelElegido').value;
         
-        // Verifica si en EL PISO ACTUAL ya hay pacas de esta orientación
         if (pacasTracker[nivel][orient] > 0) { 
             isModoLibre = false; 
         } else { 
@@ -248,6 +263,7 @@
         const gapActual = getGapActual();
         const nivel = document.getElementById('nivelElegido').value;
         const largoPlat = parseFloat(document.getElementById('plataformaLargo').value);
+        const isCentral = document.getElementById('modoCarga').value === 'central';
         
         let baseY = ALTURA_SUELO;
         if (nivel === '2') baseY += 1.10;
@@ -260,17 +276,28 @@
             const pX = p.position.x; const pZ = p.position.z; const pY = p.position.y;
             const pDim = { x: p.geometry.parameters.width, y: p.geometry.parameters.height, z: p.geometry.parameters.depth };
             
-            // Solo calcula adyacencias basándose en cajas del MISMO NIVEL
             if (Math.abs(pY - posY) < 0.1) {
-                if (!p.userData.isLeftover) candidates.push({x: pX, y: posY, z: pZ + pDim.z/2 + gapActual + dim.z/2}); 
-                candidates.push({x: pX, y: posY, z: pZ - pDim.z/2 - gapActual - dim.z/2}); 
-                candidates.push({x: pX - pDim.x/2 - dim.x/2, y: posY, z: pZ}); 
-                candidates.push({x: pX + pDim.x/2 + dim.x/2, y: posY, z: pZ}); 
+                if (isCentral) {
+                    // En modo central, X es estricto: +/- 0.80 (10cm del centro + mitad de la paca de 1.40)
+                    if (!p.userData.isLeftover) {
+                        candidates.push({x: 0.80, y: posY, z: pZ + pDim.z/2 + gapActual + dim.z/2}); 
+                        candidates.push({x: -0.80, y: posY, z: pZ + pDim.z/2 + gapActual + dim.z/2}); 
+                    }
+                    candidates.push({x: 0.80, y: posY, z: pZ - pDim.z/2 - gapActual - dim.z/2}); 
+                    candidates.push({x: -0.80, y: posY, z: pZ - pDim.z/2 - gapActual - dim.z/2}); 
+                    candidates.push({x: pX > 0 ? -0.80 : 0.80, y: posY, z: pZ}); 
+                } else {
+                    if (!p.userData.isLeftover) candidates.push({x: pX, y: posY, z: pZ + pDim.z/2 + gapActual + dim.z/2}); 
+                    candidates.push({x: pX, y: posY, z: pZ - pDim.z/2 - gapActual - dim.z/2}); 
+                    candidates.push({x: pX - pDim.x/2 - dim.x/2, y: posY, z: pZ}); 
+                    candidates.push({x: pX + pDim.x/2 + dim.x/2, y: posY, z: pZ}); 
+                }
             }
         });
         
         candidates.forEach(c => {
-            if (Math.abs(c.x) + dim.x/2 > ANCHO_PLATAFORMA/2 + 0.001) return; 
+            // En modo estandar, el voladizo lateral bloquea. En central, se permite.
+            if (!isCentral && (Math.abs(c.x) + dim.x/2 > ANCHO_PLATAFORMA/2 + 0.001)) return; 
             if (c.z - dim.z/2 >= largoPlat/2) return; 
             if (c.z - dim.z/2 < -largoPlat/2 - 0.001) return; 
             if (chequearColisiones(c.x, c.y, c.z, dim)) return; 
@@ -301,16 +328,18 @@
             const gapCM = getGapActual() === 0.12 ? "12" : "6.5";
             const nivel = document.getElementById('nivelElegido').value;
             const largoPlat = parseFloat(document.getElementById('plataformaLargo').value);
+            const isCentral = document.getElementById('modoCarga').value === 'central';
             let rawX = intersects[0].point.x;
             let rawZ = intersects[0].point.z;
 
             if (isModoLibre) {
                 panelGuia.className = "guide-panel";
-                panelGuia.innerHTML = "🔓 MODO LIBRE<br><span style='font-size: 11px; font-weight: normal;'>Coloca la caja en cualquier lugar válido de este nivel.</span>";
+                panelGuia.innerHTML = "🔓 MODO LIBRE<br><span style='font-size: 11px; font-weight: normal;'>Coloca la primera caja en este nivel.</span>";
                 
                 let posX = Math.round(rawX / GRID_SNAP) * GRID_SNAP;
-                let posZ = Math.round(rawZ / GRID_SNAP) * GRID_SNAP;
+                if (isCentral) { posX = rawX >= 0 ? 0.80 : -0.80; } // Fuerza posición central
                 
+                let posZ = Math.round(rawZ / GRID_SNAP) * GRID_SNAP;
                 const limiteFrontal = -largoPlat/2 + (dim.z / 2);
                 if (posZ < limiteFrontal) posZ = limiteFrontal;
                 
@@ -325,9 +354,12 @@
                 const excesoTrasero = Math.max(0, (posZ + dim.z / 2) - (largoPlat / 2));
                 const hayColision = chequearColisiones(posX, posY, posZ, dim);
                 
-                if (excesoAncho > 0 || hayColision) {
+                // Si hay colision o si sobresale (y no es modo central) -> BLOQUEA
+                if (hayColision || (excesoAncho > 0 && !isCentral)) {
                     rollOverMesh.material.color.setHex(0xe74c3c);
+                    pnlOverhang.className = "warning";
                     pnlOverhang.style.display = 'block';
+                    detOverhang.innerHTML = "Posición inválida o chocando.";
                     currentMagneticSlot = null;
                 } else if (excesoTrasero > 0) {
                     rollOverMesh.material.color.setHex(0xe67e22);
@@ -337,7 +369,9 @@
                     currentMagneticSlot = {x: posX, y: posY, z: posZ, isLeftover: true}; 
                 } else {
                     rollOverMesh.material.color.setHex(dim.color);
-                    pnlOverhang.style.display = 'none';
+                    pnlOverhang.className = isCentral && excesoAncho > 0 ? "warning info" : "warning";
+                    pnlOverhang.style.display = isCentral && excesoAncho > 0 ? 'block' : 'none';
+                    if(isCentral) detOverhang.innerHTML = `✔️ Modo Central Activo<br>Sobresale a los lados: ${(excesoAncho * 100).toFixed(1)} cm`;
                     currentMagneticSlot = {x: posX, y: posY, z: posZ, isLeftover: false}; 
                 }
             } else {
@@ -354,18 +388,23 @@
                     if (closestSlot && minDist < 1.5) {
                         rollOverMesh.position.set(closestSlot.x, closestSlot.y, closestSlot.z);
                         const excesoTrasero = Math.max(0, (closestSlot.z + dim.z / 2) - (largoPlat / 2));
+                        const excesoAncho = Math.max(0, (Math.abs(closestSlot.x) + dim.x / 2) - (ANCHO_PLATAFORMA / 2));
+
                         if (excesoTrasero > 0) {
                             rollOverMesh.material.color.setHex(0xe67e22);
                             pnlOverhang.className = "warning leftover"; pnlOverhang.style.display = 'block';
                             detOverhang.innerHTML = `LÍMITE ALCANZADO`;
                             currentMagneticSlot = {x: closestSlot.x, y: closestSlot.y, z: closestSlot.z, isLeftover: true};
                         } else {
-                            rollOverMesh.material.color.setHex(dim.color); pnlOverhang.style.display = 'none';
+                            rollOverMesh.material.color.setHex(dim.color); 
+                            pnlOverhang.className = isCentral && excesoAncho > 0 ? "warning info" : "warning";
+                            pnlOverhang.style.display = isCentral && excesoAncho > 0 ? 'block' : 'none';
+                            if(isCentral) detOverhang.innerHTML = `✔️ Modo Central Activo<br>Sobresale a los lados: ${(excesoAncho * 100).toFixed(1)} cm`;
                             currentMagneticSlot = {x: closestSlot.x, y: closestSlot.y, z: closestSlot.z, isLeftover: false};
                         }
                     } else {
                         rollOverMesh.position.set(rawX, rollOverMesh.position.y, rawZ);
-                        rollOverMesh.material.color.setHex(0xe74c3c); pnlOverhang.style.display = 'block';
+                        rollOverMesh.material.color.setHex(0xe74c3c); pnlOverhang.className = "warning"; pnlOverhang.style.display = 'block';
                         detOverhang.innerHTML = "Acércate a las líneas verdes."; currentMagneticSlot = null;
                     }
                 }
@@ -375,9 +414,7 @@
 
     function onClickPlacer() {
         if (!currentMagneticSlot) return; 
-        
-        const dim = getDimPaca(); 
-        const orient = document.getElementById('orientacionPaca').value;
+        const dim = getDimPaca(); const orient = document.getElementById('orientacionPaca').value;
         const nivel = document.getElementById('nivelElegido').value;
         const posX = currentMagneticSlot.x; const posY = currentMagneticSlot.y; const posZ = currentMagneticSlot.z;
         
@@ -388,7 +425,6 @@
         const paca = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial({ color: colorFinal }));
         paca.position.set(posX, posY, posZ);
         
-        // Se guarda el nivel junto con la orientación en la memoria de la paca
         paca.userData = { orientacion: orient, nivel: nivel, isLeftover: currentMagneticSlot.isLeftover };
         paca.add(new THREE.LineSegments(new THREE.EdgesGeometry(geometry), new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 })));
         
@@ -424,9 +460,9 @@
     }
 
     function onWindowResize() {
-        camera.aspect = (window.innerWidth - 350) / window.innerHeight;
+        camera.aspect = (window.innerWidth - 360) / window.innerHeight;
         camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth - 350, window.innerHeight);
+        renderer.setSize(window.innerWidth - 360, window.innerHeight);
     }
 
     async function exportPDF() {
@@ -437,7 +473,6 @@
 
         const origPos = camera.position.clone();
         const origTarget = controls.target.clone();
-        
         const captureView = (posX, posY, posZ) => {
             camera.position.set(posX, posY, posZ);
             controls.target.set(0, 2, 0); controls.update();
@@ -445,7 +480,6 @@
             return canvas.toDataURL('image/png');
         };
 
-        // ZOOM ALTO (Cámara mucho más cerca de la carga)
         const img1 = captureView(8, 6, 8);
         const img2 = captureView(0, 3, 10);
         const img3 = captureView(10, 3, 0);
@@ -456,15 +490,23 @@
 
         doc.setFontSize(22); doc.text("Informe: Carga de Pacas", 10, 20);
         doc.setFontSize(12);
-        doc.text(`Cantidad de cajas en plataforma: ${pacas.length}`, 10, 32);
-        doc.text(`Altura total desde el suelo: ${document.getElementById('alturaActual').innerText} metros`, 10, 40);
         
-        const addImg = (data, y) => {
-            doc.addImage(data, 'PNG', 10, y, 190, 110);
-        };
+        const modoCarga = document.getElementById('modoCarga').value;
+        let textoModo = modoCarga === 'central' ? "Separación Central (10cm al eje)" : "Estándar (Pegadas a los lados)";
+        
+        doc.text(`Modo de Distribución: ${textoModo}`, 10, 32);
+        if (modoCarga === 'central') {
+            doc.text(`Espacio que sobresale a los lados: 20.0 cm por lado`, 10, 40);
+        }
+        
+        doc.text(`Cantidad de cajas en plataforma: ${pacas.length}`, 10, modoCarga === 'central' ? 48 : 40);
+        doc.text(`Altura total desde el suelo: ${document.getElementById('alturaActual').innerText} metros`, 10, modoCarga === 'central' ? 56 : 48);
+        
+        const addImg = (data, y) => { doc.addImage(data, 'PNG', 10, y, 190, 110); };
 
-        doc.text("Imagen 1: Vista general de la carga", 10, 52);
-        addImg(img1, 56);
+        let startImgY = modoCarga === 'central' ? 68 : 60;
+        doc.text("Imagen 1: Vista general de la carga", 10, startImgY - 4);
+        addImg(img1, startImgY);
         doc.addPage();
         doc.text("Imagen 2: Vista desde atrás", 10, 20);
         addImg(img2, 24);
